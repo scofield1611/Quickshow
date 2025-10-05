@@ -17,7 +17,7 @@ const syncUserCreation = inngest.createFunction(
       image: image_url,
     };
     await User.create(userData);
-  }
+  } 
 );
 // Inngest Function to delete user from database
 const syncUserDeletion = inngest.createFunction(
