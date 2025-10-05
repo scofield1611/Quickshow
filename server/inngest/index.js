@@ -6,7 +6,7 @@ import User from "../models/User.js";
 await connectDB();
 
 // Create Inngest client
-export const inngest = new Inngest({ id: "my-app" });
+export const inngest = new Inngest({ id: "quickshow-app" });
 
 // User Created Event
 const syncUserCreation = inngest.createFunction(
