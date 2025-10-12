@@ -1,23 +1,45 @@
 import React, { useEffect, useState } from 'react'
-import { dummyBookingData } from '../assets/assets'
 import Loading from '../components/Loading'
 import BlurCircle from '../components/Blurcircle'
 import timeformat from '../lib/timeformat'
 import dateFormat from '../lib/dateFormat'
+import { useAppContext } from '../context/AppContext'
+import toast from 'react-hot-toast'
 
 const MyBookings = () => {
   const currency = import.meta.env.VITE_CURRENCY 
+  const { axios, getToken, user, 
+    image_base_url } = useAppContext();
+  
 
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
 
   const getMyBookings = async () => {
-    setBookings(dummyBookingData)
-    setLoading(false)
+  try {
+    const { data } = await axios.get('/api/user/bookings', {
+      headers: { Authorization: `Bearer ${await getToken()}` }
+    });
+
+    if (data.success) {
+      setBookings(data.bookings);
+    } else {
+      // It's good practice to show the error message from the API
+      toast.error(data.message);
+    }
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to fetch your bookings."); // Also show a user-friendly error here
+  } finally {
+    // This block ALWAYS runs, whether the try or catch was executed.
+    setLoading(false);
   }
+};
   useEffect(() => {
+    if(user){
     getMyBookings()
-  }, [])
+  }
+  }, [user])
   return !loading ? (
     <div className='relative px-6 md:px-16 lg:px-40 pt-30 
     min-h-[80vh] md:pt-40 '>
@@ -30,7 +52,7 @@ const MyBookings = () => {
         <div key={index} className='flex flex-col md:flex-row justify-between
         bg-primary/20 rounded-lg mt-4 p-2 max-w-3xl'>
           <div className='flex flex-col md:flex-row'>
-            <img src={item.show.movie.poster_path} alt="" 
+            <img src={image_base_url + item.show.movie.poster_path} alt="" 
             className='md:max-w-45 aspect-video h-auto object-cover object-bottom rounded'/>
             <div className='flex flex-col p-4'>
               <p className='text-lg font-semibold'>{item.show.movie.title}</p>

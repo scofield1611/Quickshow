@@ -1,22 +1,45 @@
 import React, { useEffect, useState } from 'react'
-import { dummyBookingData } from '../../assets/assets'
 import Loading from '../../components/Loading'
 import Title from '../../components/admin/title'
 import dateFormat from '../../lib/dateFormat'
+import { useAppContext } from '../../context/AppContext'
+import toast from 'react-hot-toast'
 
 const ListBookings = () => {
     const currency = import.meta.env.VITE_CURRENCY
+      const { axios, getToken, user} = useAppContext();
+    
 
     const [bookings,setBookings] = useState([])
     const [isLoading, setIsLoading] = useState(true)
 
-    const getAllBookings = async () =>{
-      setBookings(dummyBookingData)
-      setIsLoading(false)
-    };
+    const getAllBookings = async () => {
+  try {
+    const { data } = await axios.get("/api/admin/all-bookings", {
+      headers: { Authorization: `Bearer ${await getToken()}` }
+    });
+
+    // Add a check for the success flag
+    if (data.success) {
+      setBookings(data.bookings);
+    } else {
+      // Show an error toast if the API returns a failure message
+      toast.error(data.message);
+    }
+
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to fetch bookings."); // Inform the user
+  } finally {
+    // This block will always run, whether the try or catch block executes
+    setIsLoading(false);
+  }
+};
     useEffect(() =>{
+        if(user){
       getAllBookings()
-    },[])
+        }
+    },[user])
   return !isLoading ? (
     <>
       <Title text1={"List"} text2={"Bookings"}/>

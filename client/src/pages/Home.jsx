@@ -8,7 +8,7 @@ const Home = () => {
     <>
       <HeroSection/>
       <FeaturedMovies/>
-      <TrailerSection/>
+     
     </>
   )
 }
