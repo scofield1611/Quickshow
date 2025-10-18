@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 import Loading from '../../components/Loading';
-import Title from '../../components/admin/Title';
+import Title from '../../components/admin/title';
 import { 
   TheaterIcon, 
   CheckIcon, 
@@ -356,11 +356,5 @@ const TheatreCard = ({ theatre, onApprove, onReject }) => {
   );
 };
 
-const StatCard = ({ title, value, color }) => (
-  <div className='bg-primary/10 border border-primary/20 rounded-lg p-4'>
-    <p className='text-sm text-gray-400'>{title}</p>
-    <p className={`text-2xl font-bold ${color} mt-1`}>{value}</p>
-  </div>
-);
 
 export default TheatreManagement;
