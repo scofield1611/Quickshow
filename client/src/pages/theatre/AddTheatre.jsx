@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
-import Title from '../../components/admin/Title';
+import Title from '../../components/admin/title';
 import { TheaterIcon, MapPinIcon, PhoneIcon, MailIcon, FileTextIcon } from 'lucide-react';
 
 const AddTheatre = () => {

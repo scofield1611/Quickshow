@@ -10,8 +10,8 @@ import {
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 import Loading from '../../components/Loading';
-import Title from '../../components/admin/Title';
-import BlurCircle from '../../components/BlurCircle';
+import Title from '../../components/admin/title';
+import BlurCircle from '../../components/Blurcircle';
 import { Link } from 'react-router-dom';
 
 const TheatreDashboard = () => {
