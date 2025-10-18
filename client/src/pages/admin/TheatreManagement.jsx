@@ -1,10 +1,8 @@
-// File: src/pages/admin/TheatreManagement.jsx
-
 import React, { useEffect, useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 import Loading from '../../components/Loading';
-import Title from '../../components/admin/title';
+import Title from '../../components/admin/Title';
 import { 
   TheaterIcon, 
   CheckIcon, 
@@ -12,8 +10,7 @@ import {
   MapPinIcon,
   PhoneIcon,
   MailIcon,
-  ClockIcon,
-  AlertCircleIcon
+  ClockIcon
 } from 'lucide-react';
 
 const TheatreManagement = () => {
@@ -24,7 +21,7 @@ const TheatreManagement = () => {
   const [filter, setFilter] = useState('PENDING_APPROVAL');
   const [selectedTheatre, setSelectedTheatre] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState(''); // 'approve' or 'reject'
+  const [modalType, setModalType] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -195,6 +192,7 @@ const TheatreManagement = () => {
             
             <div className='mb-4'>
               <p className='text-gray-400 mb-2'>Theatre: {selectedTheatre?.name}</p>
+              <p className='text-sm text-gray-500'>Owner: {selectedTheatre?.owner?.name}</p>
               <p className='text-sm text-gray-500'>{selectedTheatre?.address.city}</p>
             </div>
 
@@ -275,7 +273,7 @@ const TheatreCard = ({ theatre, onApprove, onReject }) => {
           <div>
             <h3 className='text-lg font-medium'>{theatre.name}</h3>
             <p className='text-sm text-gray-400'>
-              Owner: {theatre.owner?.name || 'N/A'}
+              Owner: {theatre.owner?.name || 'N/A'} ({theatre.owner?.email})
             </p>
           </div>
         </div>
@@ -318,6 +316,22 @@ const TheatreCard = ({ theatre, onApprove, onReject }) => {
         </div>
       )}
 
+      {theatre.policies && (theatre.policies.cancellationPolicy || theatre.policies.refundPolicy) && (
+        <div className='mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded text-sm'>
+          <p className='text-blue-500 font-medium mb-2'>Policies:</p>
+          {theatre.policies.cancellationPolicy && (
+            <p className='text-gray-300 mb-1'>
+              <span className='text-gray-400'>Cancellation:</span> {theatre.policies.cancellationPolicy}
+            </p>
+          )}
+          {theatre.policies.refundPolicy && (
+            <p className='text-gray-300'>
+              <span className='text-gray-400'>Refund:</span> {theatre.policies.refundPolicy}
+            </p>
+          )}
+        </div>
+      )}
+
       {theatre.approvalStatus === 'PENDING_APPROVAL' && (
         <div className='flex gap-2 pt-4 border-t border-gray-700'>
           <button
@@ -341,5 +355,12 @@ const TheatreCard = ({ theatre, onApprove, onReject }) => {
     </div>
   );
 };
+
+const StatCard = ({ title, value, color }) => (
+  <div className='bg-primary/10 border border-primary/20 rounded-lg p-4'>
+    <p className='text-sm text-gray-400'>{title}</p>
+    <p className={`text-2xl font-bold ${color} mt-1`}>{value}</p>
+  </div>
+);
 
 export default TheatreManagement;

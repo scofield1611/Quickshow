@@ -19,6 +19,8 @@ import TheatreLayout from './pages/theatre/TheatreLayout'
 import TheatreDashboard from './pages/theatre/TheatreDashboard'
 import AddTheatre from './pages/theatre/AddTheatre'
 import MyTheatres from './pages/theatre/MyTheatres'
+import ManageShows from './pages/theatre/ManageShows'
+import AddShow from './pages/theatre/AddShow'
 import { useAppContext } from './context/AppContext'
 import { SignIn } from '@clerk/clerk-react'
 import Loading from './components/Loading'
@@ -63,6 +65,9 @@ const App = () => {
           <Route index element = {<TheatreDashboard/>} />
           <Route path='my-theatres' element = {<MyTheatres/>} />
           <Route path='add-theatre' element = {<AddTheatre/>} />
+          <Route path='add-show' element = {<AddShow/>} />
+          <Route path='add-show/:theatreId' element = {<AddShow/>} />
+          <Route path='manage-shows/:theatreId' element = {<ManageShows/>} />
         </Route>
       </Routes>
       {!isAdminRoute && !isTheatreRoute && <Footer/>}

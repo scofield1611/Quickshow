@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 import Loading from '../../components/Loading';
-import Title from '../../components/admin/title';
+import Title from '../../components/admin/Title';
 import { 
   TheaterIcon, 
   MapPinIcon, 

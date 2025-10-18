@@ -17,8 +17,7 @@ const TheatreSidebar = () => {
     { name: 'Dashboard', path: '/theatre', icon: LayoutDashboardIcon },
     { name: 'My Theatres', path: '/theatre/my-theatres', icon: TheaterIcon },
     { name: 'Add Theatre', path: '/theatre/add-theatre', icon: PlusSquareIcon },
-    { name: 'Manage Shows', path: '/theatre/manage-shows', icon: ListIcon },
-    { name: 'Settings', path: '/theatre/settings', icon: SettingsIcon },
+    { name: 'Add Show', path: '/theatre/add-show', icon: ListIcon },
   ];
 
   return (
