@@ -6,7 +6,8 @@ import Loading from '../../components/Loading';
 import Title from '../../components/admin/Title';
 import { 
   PlusIcon, 
-  Trash2Icon, 
+  Trash2Icon,
+  FilmIcon,
   CalendarIcon,
   DollarSignIcon,
   UsersIcon,
@@ -126,7 +127,7 @@ const ManageShows = () => {
                 hover:bg-primary/15 transition-all hover:shadow-xl'
             >
               {/* Movie Poster */}
-              {show.movie && (
+              {show.movie ? (
                 <div className='relative'>
                   <img 
                     src={image_base_url + show.movie.poster_path} 
@@ -138,12 +139,23 @@ const ManageShows = () => {
                     {show.hallName}
                   </div>
                 </div>
+              ) : (
+                <div className='relative bg-gradient-to-br from-primary/20 to-primary/5 h-64 flex items-center justify-center'>
+                  <div className='text-center p-4'>
+                    <FilmIcon className='w-12 h-12 mx-auto text-gray-600 mb-2' />
+                    <p className='text-gray-400'>{show.movieName || 'Unknown Movie'}</p>
+                  </div>
+                  <div className='absolute top-2 right-2 px-3 py-1 bg-black/70 
+                    backdrop-blur-sm rounded-full text-sm font-medium'>
+                    {show.hallName}
+                  </div>
+                </div>
               )}
 
               <div className='p-4'>
                 {/* Movie Title */}
                 <h3 className='text-lg font-medium mb-3 truncate'>
-                  {show.movie?.title || 'Unknown Movie'}
+                  {show.movie?.title || show.movieName || 'Unknown Movie'}
                 </h3>
 
                 {/* Show Details */}

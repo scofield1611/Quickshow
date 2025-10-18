@@ -93,6 +93,17 @@ export const getShows = async (req, res) => {
   }
 };
 
+// API to get all movies from database
+export const getAllMovies = async (req, res) => {
+  try {
+    const movies = await Movie.find({}).sort({ release_date: -1 });
+    res.json({ success: true, movies });
+  } catch (error) {
+    console.error(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
 export const getShow = async (req, res) => {
   try {
     const { movieId } = req.params;
