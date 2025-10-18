@@ -9,6 +9,7 @@ import showRouter from './routes/showRoutes.js'
 import bookingRouter from './routes/bookingRoutes.js'
 import adminRouter from './routes/adminRoutes.js'
 import userRouter from './routes/userRoutes.js'
+import theatreRouter from './routes/theatreRoutes.js'
 import { stripeWebhooks } from './controllers/stripeWebhook.js'
 
 
@@ -29,6 +30,7 @@ app.use('/api/shows',showRouter)
 app.use('/api/booking',bookingRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/user', userRouter)
+app.use('/api/theatre', theatreRouter)
 
 app.listen(port, ()=> (
     console.log(`Server listening at http://localhost:${(port)} `))
