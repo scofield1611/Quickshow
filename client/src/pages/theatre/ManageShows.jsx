@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 import Loading from '../../components/Loading';
-import Title from '../../components/admin/Title';
+import Title from '../../components/admin/title';
 import { 
   PlusIcon, 
   Trash2Icon,
@@ -129,11 +129,11 @@ const ManageShows = () => {
               {/* Movie Poster */}
               {show.movie ? (
                 <div className='relative'>
-                  <img 
+                  {/* <img 
                     src={image_base_url + show.movie.poster_path} 
                     alt={show.movie.title}
                     className='w-full h-64 object-cover'
-                  />
+                  /> */}
                   <div className='absolute top-2 right-2 px-3 py-1 bg-black/70 
                     backdrop-blur-sm rounded-full text-sm font-medium'>
                     {show.hallName}
@@ -155,7 +155,7 @@ const ManageShows = () => {
               <div className='p-4'>
                 {/* Movie Title */}
                 <h3 className='text-lg font-medium mb-3 truncate'>
-                  {show.movie?.title || show.movieName || 'Unknown Movie'}
+                  {show?.movieName || 'Unknown Movie'}
                 </h3>
 
                 {/* Show Details */}

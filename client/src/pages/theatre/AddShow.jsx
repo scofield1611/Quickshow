@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
-import Title from '../../components/admin/Title';
+import Title from '../../components/admin/title';
 import Loading from '../../components/Loading';
 import { TheaterIcon, FilmIcon, MapPinIcon, CalendarIcon, DollarSignIcon, LayoutGridIcon } from 'lucide-react';
 
@@ -52,7 +52,7 @@ const AddShow = () => {
   // Fetch available movies
   const fetchMovies = async () => {
     try {
-      const { data } = await axios.get('/api/shows/movies');
+      const { data } = await axios.get('/api/shows/now-playing');
       if (data.success) {
         setMovies(data.movies || []);
       }

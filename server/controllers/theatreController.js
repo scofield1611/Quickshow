@@ -340,7 +340,6 @@ export const getTheatreShows = async (req, res) => {
       });
     }
 
-    // If not owner, only show approved theatre's shows
     if (theatre.owner !== userId && theatre.approvalStatus !== 'APPROVED') {
       return res.status(403).json({
         success: false,
@@ -353,31 +352,10 @@ export const getTheatreShows = async (req, res) => {
       .sort({ showDateTime: 1 })
       .lean();
 
-    // Process each show to handle movie field
-    const processedShows = await Promise.all(shows.map(async (show) => {
-      let movieData = null;
-      let movieName = 'Unknown Movie';
-
-      try {
-        // Try to populate movie if it's a valid ID
-        const populatedMovie = await mongoose.model('Movie').findById(show.movie);
-        if (populatedMovie) {
-          movieData = populatedMovie;
-          movieName = populatedMovie.title;
-        } else {
-          // Movie ID not found in database, use the string value as name
-          movieName = show.movie || 'Unknown Movie';
-        }
-      } catch (error) {
-        // If movie field is not a valid ID (like a title string), use it as name
-        movieName = show.movie || 'Unknown Movie';
-      }
-
-      return {
-        ...show,
-        movie: movieData,
-        movieName: movieName
-      };
+    // Simply return movie field as movieName
+    const processedShows = shows.map(show => ({
+      ...show,
+      movieName: show.movie  // Whatever is in movie field
     }));
 
     res.json({
