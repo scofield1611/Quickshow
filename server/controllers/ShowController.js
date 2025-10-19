@@ -20,7 +20,7 @@ export const getNowPlayingMovies = async(req , res) =>{
 // API to add a new show to the database
 export const addShow = async (req, res) => {
   try {
-    const { movieId, showsInput, showPrice } = req.body;
+    const { movieId, showsInput, showPrice, theatre, hallName, seatConfiguration } = req.body;
 
     let movie = await Movie.findById(movieId);
 
@@ -38,39 +38,75 @@ export const addShow = async (req, res) => {
       const movieCreditsData = movieCreditsResponse.data;
 
       const movieDetails = {
-  _id: movieId,
-  title: movieApiData.title,
-  overview: movieApiData.overview,
-  poster_path: movieApiData.poster_path,
-  backdrop_path: movieApiData.backdrop_path,
-  genres: movieApiData.genres,
-  casts: movieCreditsData.cast,
-  release_date: movieApiData.release_date,
-  original_language: movieApiData.original_language,
-  tagline: movieApiData.tagline || "",
-  vote_average: movieApiData.vote_average,
-  runtime: movieApiData.runtime,
-};
-    // Add movie to the database
-    movie = await Movie.create(movieDetails);
-  }
+        _id: movieId,
+        title: movieApiData.title,
+        overview: movieApiData.overview,
+        poster_path: movieApiData.poster_path,
+        backdrop_path: movieApiData.backdrop_path,
+        genres: movieApiData.genres,
+        casts: movieCreditsData.cast,
+        release_date: movieApiData.release_date,
+        original_language: movieApiData.original_language,
+        tagline: movieApiData.tagline || "",
+        vote_average: movieApiData.vote_average,
+        runtime: movieApiData.runtime,
+      };
+      // Add movie to the database
+      movie = await Movie.create(movieDetails);
+    }
 
-  const showsToCreate = [];
-  showsInput.forEach((show) => {
-    const showDate = show.date;
-    show.time.forEach((time) => {
-      const dateTimeString = `${showDate}T${time}`;
-      showsToCreate.push({
-        movie: movieId,
-        showDateTime: new Date(dateTimeString),
-        showPrice,
-        occupiedSeats: {},
+    // Get or create default admin theatre
+    let adminTheatre = theatre;
+    if (!adminTheatre) {
+      // Find or create a default admin theatre
+      const Theatre = (await import("../models/Theatre.js")).default;
+      let defaultTheatre = await Theatre.findOne({ name: "Admin Default Theatre" });
+
+      if (!defaultTheatre) {
+        const { userId } = req.auth();
+        defaultTheatre = await Theatre.create({
+          name: "Admin Default Theatre",
+          owner: userId,
+          address: {
+            street: "Admin Office",
+            city: "Mumbai",
+            state: "Maharashtra",
+            zipCode: "400001",
+            country: "India"
+          },
+          contact: {
+            phone: "1800-000-0000",
+            email: "admin@quickshow.com"
+          },
+          approvalStatus: 'APPROVED',
+          isActive: true
+        });
+      }
+      adminTheatre = defaultTheatre._id;
+    }
+
+    const showsToCreate = [];
+    showsInput.forEach((show) => {
+      const showDate = show.date;
+      show.time.forEach((time) => {
+        const dateTimeString = `${showDate}T${time}`;
+        showsToCreate.push({
+          movie: movieId,
+          theatre: adminTheatre,
+          hallName: hallName || "Main Screen",
+          showDateTime: new Date(dateTimeString),
+          showPrice,
+          totalSeats: seatConfiguration?.rows * seatConfiguration?.seatsPerRow || 150,
+          seatConfiguration: seatConfiguration || { rows: 10, seatsPerRow: 15 },
+          occupiedSeats: {},
+        });
       });
     });
-  });
-  if (showsToCreate.length > 0) {
-    await Show.insertMany(showsToCreate);
-  }
+
+    if (showsToCreate.length > 0) {
+      await Show.insertMany(showsToCreate);
+    }
+
     res.json({ success: true, message: 'Shows added successfully' });
   } catch (error) {
     console.error(error);
@@ -81,12 +117,55 @@ export const addShow = async (req, res) => {
 // API to get all shows from the database
 export const getShows = async (req, res) => {
   try {
-    const shows = await Show.find({ showDateTime: { $gte: new Date() } }).populate('movie').sort({ showDateTime: 1 });
+    // Get all shows (including past ones for testing)
+    const shows = await Show.find({})
+      .populate('movie')
+      .sort({ showDateTime: -1 })
+      .lean();
 
-    // filter unique shows
-    const uniqueShows = new Set(shows.map(show => show.movie));
+    console.log('DEBUG getShows: Total shows found:', shows.length);
 
-    res.json({ success: true, shows: Array.from(uniqueShows) });
+    // Build unique movies, handle both valid IDs and string titles
+    const uniqueMoviesMap = new Map();
+
+    shows.forEach(show => {
+      let movieKey, movieObj;
+
+      if (show.movie && typeof show.movie === 'object' && show.movie._id) {
+        // Valid movie with full data
+        movieKey = show.movie._id;
+        movieObj = show.movie;
+        console.log('Valid movie:', show.movie.title);
+      } else if (show.movie && typeof show.movie === 'string') {
+        // Movie is string title - create fallback
+        movieKey = show.movie;
+        movieObj = {
+          id: show.movie,
+          _id: show.movie,
+          title: show.movie,
+          poster_path: null,
+          backdrop_path: null,
+          vote_average: 7.0,
+          release_date: "2025",
+          overview: 'Available for booking',
+          genres: [],
+          runtime: 120
+        };
+        console.log('Fallback movie:', show.movie);
+      } else {
+        console.log('Skipping show with no movie');
+        return; // Skip if no movie data
+      }
+
+      if (!uniqueMoviesMap.has(movieKey)) {
+        uniqueMoviesMap.set(movieKey, movieObj);
+      }
+    });
+
+    const uniqueMovies = Array.from(uniqueMoviesMap.values());
+    console.log('DEBUG: Returning', uniqueMovies.length, 'unique movies');
+
+    res.json({ success: true, shows: uniqueMovies });
   } catch (error) {
     console.error(error);
     res.json({ success: false, message: error.message });

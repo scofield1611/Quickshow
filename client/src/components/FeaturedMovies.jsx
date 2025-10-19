@@ -23,9 +23,12 @@ const FeaturedMovies = () => {
       </div>
 
       <div className='flex flex-wrap max-sm:justify-center gap-8 mt-8'>
-        {shows.slice(0,4).map((show) => (
-          <MovieCard key={show.id} movie={show}/>
-        ))}
+        {shows
+          .filter(show => show && (show.id || show._id)) // Check both id and _id
+          .slice(0,4)
+          .map((show) => (
+            <MovieCard key={show.id || show._id} movie={show}/>
+          ))}
       </div>
 
 

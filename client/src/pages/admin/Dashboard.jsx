@@ -77,8 +77,9 @@ const Dashboard = () => {
       <p className='mt-10 text-lg font-medium'>Active Shows</p>
       <div className='relative flex flex-wrap gap-6 mt-4 max-w-5xl'>
         <BlurCircle top='100px' left='-10%' />
-        {/* Note: This should probably map over dashboardData.activeShows, not dummy data */}
-        {dashboardData.activeShows.map((show) => (
+        {dashboardData.activeShows
+          .filter(show => show.movie) // Only show shows with valid movie data
+          .map((show) => (
           <div key={show._id} className='w-55 rounded-lg overflow-hidden h-full
             pb-3 bg-primary/10 border border-primary/20 
             hover:-translate-y-1 transition duration-300'>

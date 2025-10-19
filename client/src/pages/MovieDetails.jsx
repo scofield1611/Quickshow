@@ -23,15 +23,37 @@ const MovieDetails = () => {
   const getShow = async () => {
     try {
       setLoading(true);
+
+      // First try the old API
       const { data } = await axios.get(`/api/shows/${id}`);
-      if (data.success) {
+      if (data.success && data.movie) {
         setShowData(data);
       } else {
-        toast.error(data.message);
+        // If old API fails, just get the movie from the shows array
+        const movieFromShows = shows.find(s => s._id === id || s.id === id);
+        if (movieFromShows) {
+          setShowData({
+            movie: movieFromShows,
+            shows: {} // Empty shows for now
+          });
+          toast.info('View theatres to see available showtimes');
+        } else {
+          toast.error('Movie not found');
+        }
       }
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load movie details.");
+      // Fallback: try to find movie in shows array
+      const movieFromShows = shows.find(s => s._id === id || s.id === id);
+      if (movieFromShows) {
+        setShowData({
+          movie: movieFromShows,
+          shows: {}
+        });
+        toast.info('View theatres to see available showtimes');
+      } else {
+        toast.error("Failed to load movie details.");
+      }
     } finally {
       setLoading(false);
     }
@@ -105,7 +127,12 @@ const MovieDetails = () => {
               <PlayCircleIcon className='w-5 h-5' />
               Watch Trailer
             </button>
-            <a href="#dateSelect" className='px-10 py-3 text-sm bg-primary hover:bg-primary/90 transition rounded-md font-medium cursor-pointer active:scale-95'>Buy Tickets</a>
+            <button 
+              onClick={() => navigate('/theatres')}
+              className='px-10 py-3 text-sm bg-primary hover:bg-primary/90 transition rounded-md font-medium cursor-pointer active:scale-95'
+            >
+              View Theatres
+            </button>
             <button onClick={handleFavorite} className='bg-gray-700 p-2.5 rounded-full transition cursor-pointer active:scale-95'>
               <Heart className={`w-5 h-5 ${isFavorite ? 'fill-primary text-primary' : 'text-white'}`} />
             </button>
@@ -126,6 +153,22 @@ const MovieDetails = () => {
       </div>
 
       <DateSelect dateTime={groupedShows} id={id} />
+
+      {/* New Theatre-based booking message */}
+      {(!groupedShows || Object.keys(groupedShows).length === 0) && (
+        <div className='mt-16 p-8 bg-primary/10 border border-primary/20 rounded-lg text-center max-w-2xl mx-auto'>
+          <h3 className='text-xl font-semibold mb-3'>Ready to Watch?</h3>
+          <p className='text-gray-400 mb-6'>
+            Browse theatres near you to find showtimes for this movie
+          </p>
+          <button
+            onClick={() => navigate('/theatres')}
+            className='px-8 py-3 bg-primary hover:bg-primary/90 rounded-md transition-colors font-medium'
+          >
+            Browse Theatres
+          </button>
+        </div>
+      )}
 
       <p className='text-lg font-medium mt-20 mb-8'>You May Also Like</p>
       <div className='flex flex-wrap justify-center md:justify-start gap-8'>

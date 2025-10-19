@@ -9,7 +9,8 @@ import {
   createShow,
   getTheatreShows,
   updateShow,
-  deleteShow
+  deleteShow,
+  getShowById
 } from "../controllers/theatreController.js";
 import { protectTheatreOwner, protectUser } from "../middleware/auth.js";
 
@@ -30,5 +31,8 @@ router.post("/:theatreId/shows", protectTheatreOwner, createShow);
 router.get("/:theatreId/shows", protectUser, getTheatreShows);
 router.put("/:theatreId/shows/:showId", protectTheatreOwner, updateShow);
 router.delete("/:theatreId/shows/:showId", protectTheatreOwner, deleteShow);
+
+// Get single show by ID (for booking)
+router.get("/show/:showId", getShowById);
 
 export default router;

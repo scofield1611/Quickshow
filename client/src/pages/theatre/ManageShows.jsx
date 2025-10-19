@@ -127,23 +127,23 @@ const ManageShows = () => {
                 hover:bg-primary/15 transition-all hover:shadow-xl'
             >
               {/* Movie Poster */}
-              {show.movie ? (
+              {show.movie && typeof show.movie === 'object' && show.movie.poster_path ? (
                 <div className='relative'>
-                  {/* <img 
-                    src={image_base_url + show.movie.poster_path} 
+                  <img
+                    src={image_base_url + show.movie.poster_path}
                     alt={show.movie.title}
                     className='w-full h-64 object-cover'
-                  /> */}
-                  <div className='absolute top-2 right-2 px-3 py-1 bg-black/70 
+                  />
+                  <div className='absolute top-2 right-2 px-3 py-1 bg-black/70
                     backdrop-blur-sm rounded-full text-sm font-medium'>
                     {show.hallName}
                   </div>
                 </div>
               ) : (
-                <div className='relative bg-gradient-to-br from-primary/20 to-primary/5 h-64 flex items-center justify-center'>
+                <div className='relative bg-gradient-to-br from-pink-500/20 to-purple-500/20 h-64 flex items-center justify-center'>
                   <div className='text-center p-4'>
-                    <FilmIcon className='w-12 h-12 mx-auto text-gray-600 mb-2' />
-                    <p className='text-gray-400'>{show.movieName || 'Unknown Movie'}</p>
+                    <div className='text-5xl mb-2'>🎬</div>
+                    <p className='text-white font-medium'>{show.movieName || show.movie || 'Movie'}</p>
                   </div>
                   <div className='absolute top-2 right-2 px-3 py-1 bg-black/70 
                     backdrop-blur-sm rounded-full text-sm font-medium'>

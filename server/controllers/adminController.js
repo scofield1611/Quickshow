@@ -13,13 +13,21 @@ export const isAdmin = async (req, res) => {
 export const getDashboardData = async (req, res) => {
   try {
     const bookings = await Booking.find({isPaid: true});
-    const activeShows = await Show.find({showDateTime: {$gte: new Date()}}).populate('movie');
+    const activeShows = await Show.find({showDateTime: {$gte: new Date()}})
+      .populate('movie')
+      .lean();
+
+    // Add movieName to activeShows
+    const processedActiveShows = activeShows.map(show => ({
+      ...show,
+      movieName: show.movie?.title || show.movie || 'Unknown Movie'
+    }));
 
     const totalUser = await User.countDocuments()
     const dashboardData = {
       totalBookings: bookings.length,
       totalRevenue: bookings.reduce((acc, booking) => acc + booking.amount, 0),
-      activeShows,
+      activeShows: processedActiveShows,
       totalUser
     }
 
@@ -33,8 +41,18 @@ export const getDashboardData = async (req, res) => {
 // API to get all shows
 export const getAllShows = async (req, res) => {
   try {
-    const shows = await Show.find({ showDateTime: { $gte: new Date() } }).populate('movie').sort({ showDateTime: 1 });
-    res.json({ success: true, shows });
+    const shows = await Show.find({})
+      .populate('movie')
+      .sort({ showDateTime: -1 })
+      .lean();
+    
+    // Add movieName field for display
+    const processedShows = shows.map(show => ({
+      ...show,
+      movieName: show.movie?.title || show.movie || 'Unknown Movie'
+    }));
+    
+    res.json({ success: true, shows: processedShows });
   } catch (error) {
     console.error(error);
     res.json({ success: false, message: error.message });
@@ -44,12 +62,25 @@ export const getAllShows = async (req, res) => {
 // API to get all bookings
 export const getAllBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({}).populate('user').populate({
-      path: "show",
-      populate: { path: "movie" }
-    }).sort({ createdAt: -1 });
+    const bookings = await Booking.find({})
+      .populate('user')
+      .populate({
+        path: "show",
+        populate: { path: "movie" }
+      })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    res.json({ success: true, bookings });
+    // Add movieName to each booking's show
+    const processedBookings = bookings.map(booking => ({
+      ...booking,
+      show: booking.show ? {
+        ...booking.show,
+        movieName: booking.show.movie?.title || booking.show.movie || 'Unknown Movie'
+      } : null
+    }));
+
+    res.json({ success: true, bookings: processedBookings });
   } catch (error) {
     console.error(error);
     res.json({ success: false, message: error.message });

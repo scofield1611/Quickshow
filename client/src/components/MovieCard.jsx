@@ -27,12 +27,25 @@ const MovieCard = ({ movie }) => {
     <div className='flex flex-col justify-between p-3 bg-gray-800
     rounded-2xl hover:-translate-y-1 transition duration-300 w-60'>
 
-      <img
-        onClick={handleNavigate}
-        src={image_base_url + movie.backdrop_path}
-        alt={movie.title}
-        className='rounded-lg h-52 w-full object-cover cursor-pointer'
-      />
+      {movie.backdrop_path ? (
+        <img
+          onClick={handleNavigate}
+          src={image_base_url + movie.backdrop_path}
+          alt={movie.title}
+          className='rounded-lg h-52 w-full object-cover cursor-pointer'
+        />
+      ) : (
+        <div
+          onClick={handleNavigate}
+          className='rounded-lg h-52 w-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 
+            flex items-center justify-center cursor-pointer hover:from-pink-500/30 hover:to-purple-500/30 transition'
+        >
+          <div className='text-center p-4'>
+            <div className='text-5xl mb-2'>🎬</div>
+            <p className='text-white font-medium text-sm'>{movie.title}</p>
+          </div>
+        </div>
+      )}
 
       <p className='font-semibold mt-2 truncate'>{movie.title}</p>
       

@@ -469,3 +469,41 @@ export const deleteShow = async (req, res) => {
     });
   }
 };
+
+// @desc    Get single show by ID (for booking)
+// @route   GET /api/theatre/show/:showId
+// @access  Public
+export const getShowById = async (req, res) => {
+  try {
+    const { showId } = req.params;
+
+    const show = await Show.findById(showId)
+      .populate('theatre')
+      .lean();
+
+    if (!show) {
+      return res.status(404).json({
+        success: false,
+        message: "Show not found"
+      });
+    }
+
+    // Add movieName for display
+    const processedShow = {
+      ...show,
+      movieName: show.movie || 'Unknown Movie'
+    };
+
+    res.json({
+      success: true,
+      show: processedShow
+    });
+  } catch (error) {
+    console.error("Error fetching show:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Error fetching show", 
+      error: error.message 
+    });
+  }
+};

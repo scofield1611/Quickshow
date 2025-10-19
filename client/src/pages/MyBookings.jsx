@@ -53,11 +53,21 @@ const MyBookings = () => {
         <div key={index} className='flex flex-col md:flex-row justify-between
         bg-primary/20 rounded-lg mt-4 p-2 max-w-3xl'>
           <div className='flex flex-col md:flex-row'>
-            <img src={image_base_url + item.show.movie.poster_path} alt="" 
-            className='md:max-w-45 aspect-video h-auto object-cover object-bottom rounded'/>
+            {item.show?.movie?.poster_path ? (
+              <img src={image_base_url + item.show.movie.poster_path} alt="" 
+                className='md:max-w-45 aspect-video h-auto object-cover object-bottom rounded'/>
+            ) : (
+              <div className='md:max-w-45 aspect-video bg-gradient-to-br from-pink-500/20 to-purple-500/20 
+                rounded flex items-center justify-center'>
+                <div className='text-center p-4'>
+                  <div className='text-4xl mb-2'>🎬</div>
+                  <p className='text-sm text-gray-400'>{item.show?.movie || 'Movie'}</p>
+                </div>
+              </div>
+            )}
             <div className='flex flex-col p-4'>
-              <p className='text-lg font-semibold'>{item.show.movie.title}</p>
-              <p className='text-gray-400 text-sm'>{timeformat(item.show.movie.runtime)}</p>
+              <p className='text-lg font-semibold'>{item.show?.movie?.title || item.show?.movie || 'Unknown Movie'}</p>
+              <p className='text-gray-400 text-sm'>{item.show?.movie?.runtime ? timeformat(item.show.movie.runtime) : ''}</p>
               <p className='text-gray-400 text-sm mt-auto'>{dateFormat(item.show.showDateTime)}</p>
             </div>
             </div>

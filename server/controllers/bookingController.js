@@ -77,12 +77,16 @@ export const createBooking = async (req, res) => {
     // Stripe Gateway Initialize
     const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
 
+    // Get movie title (handle null movie)
+    const movieTitle = showData.movie || 'Movie';
+    const theatreName = showData.theatre.name;
+
     // Creating line items for Stripe
     const line_items = [{
       price_data: {
         currency: 'usd',
         product_data: {
-          name: `${showData.movie.title} - ${showData.theatre.name}`
+          name: `${movieTitle} - ${theatreName}`
         },
         unit_amount: Math.floor(booking.amount) * 100
       },
@@ -104,13 +108,18 @@ export const createBooking = async (req, res) => {
     booking.paymentLink = session.url;
     await booking.save();
 
-    // Run Inngest Scheduler Function to check payment status after 10 minutes
-    await inngest.send({
-      name: "app/checkpayment",
-      data: {
-        bookingId: booking._id.toString()
-      }
-    });
+    // Run Inngest Scheduler Function (optional - wrapped in try-catch)
+    try {
+      const { inngest } = await import('../inngest/index.js');
+      await inngest.send({
+        name: "app/checkpayment",
+        data: {
+          bookingId: booking._id.toString()
+        }
+      });
+    } catch (inngestError) {
+      console.log('Inngest scheduling skipped');
+    }
 
     res.json({success: true, url : session.url})
 
