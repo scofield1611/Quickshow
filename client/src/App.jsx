@@ -6,6 +6,9 @@ import MovieDetails from './pages/MovieDetails'
 import SeatLayout from './pages/SeatLayout'
 import MyBookings from './pages/MyBookings'
 import Favorite from './pages/Favorite'
+import Theatres from './pages/Theatres'
+import TheatreShows from './pages/TheatreShows'
+import BookShow from './pages/BookShow'
 import Navbar from './components/Navbar'
 import { Toaster } from 'react-hot-toast'
 import Footer from './components/Footer'
@@ -14,25 +17,40 @@ import AddShows from './pages/admin/AddShows'
 import Dashboard from './pages/admin/Dashboard'
 import ListShows from './pages/admin/ListShows'
 import ListBookings from './pages/admin/ListBookings'
+import TheatreManagement from './pages/admin/TheatreManagement'
+import TheatreLayout from './pages/theatre/TheatreLayout'
+import TheatreDashboard from './pages/theatre/TheatreDashboard'
+import AddTheatre from './pages/theatre/AddTheatre'
+import MyTheatres from './pages/theatre/MyTheatres'
+import ManageShows from './pages/theatre/ManageShows'
+import AddShow from './pages/theatre/AddShow'
+import EditTheatre from './pages/theatre/EditTheatre'
 import { useAppContext } from './context/AppContext'
 import { SignIn } from '@clerk/clerk-react'
 import Loading from './components/Loading'
 
 const App = () => {
-  const isAdminRoute = useLocation().pathname.startsWith('/admin');// Check if the current route is an admin route
+  const isAdminRoute = useLocation().pathname.startsWith('/admin');
+  const isTheatreRoute = useLocation().pathname.startsWith('/theatre');
   const {user} = useAppContext()
+  
   return (
     <>
-      <Toaster /> {/* Toast notification container */}
-      {!isAdminRoute && <Navbar/>}
-      <Routes> {/* Define application routes */}
+      <Toaster />
+      {!isAdminRoute && !isTheatreRoute && <Navbar/>}
+      <Routes>
         <Route path='/' element = {<Home/>} />
         <Route path='/movies' element = {<Movies/>} />
+        <Route path='/theatres' element = {<Theatres/>} />
         <Route path='/movies/:id' element = {<MovieDetails/>} />
         <Route path='/movies/:id/:date' element = {<SeatLayout/>} />
         <Route path='/my-bookings' element = {<MyBookings/>} />
+        <Route path='/theatre/:theatreId/shows' element = {<TheatreShows/>} />
+        <Route path='/book-show/:showId' element = {<BookShow/>} />
         <Route path='/loading/:nextUrl' element = {<Loading/>} />
         <Route path='/favorite' element = {<Favorite/>} /> 
+        
+        {/* Admin Routes */}
         <Route path='/admin/*' element = {user ?<Layout/> : (
           <div className='flex justify-center items-center h-screen'>
             <SignIn fallbackRedirectUrl={'/admin'} />
@@ -42,9 +60,25 @@ const App = () => {
           <Route path='add-shows' element = {<AddShows/>} />
           <Route path='list-shows' element = {<ListShows/>} />
           <Route path='list-bookings' element = {<ListBookings/>} />   
+          <Route path='theatres' element = {<TheatreManagement/>} />   
+        </Route>
+
+        {/* Theatre Owner Routes */}
+        <Route path='/theatre/*' element = {user ? <TheatreLayout/> : (
+          <div className='flex justify-center items-center h-screen'>
+            <SignIn fallbackRedirectUrl={'/theatre'} />
+          </div>
+        )}>
+          <Route index element = {<TheatreDashboard/>} />
+          <Route path='my-theatres' element = {<MyTheatres/>} />
+          <Route path='add-theatre' element = {<AddTheatre/>} />
+          <Route path='add-show' element = {<AddShow/>} />
+          <Route path='add-show/:theatreId' element = {<AddShow/>} />
+          <Route path='manage-shows/:theatreId' element = {<ManageShows/>} />
+          <Route path='edit/:theatreId' element = {<EditTheatre/>} />
         </Route>
       </Routes>
-      {!isAdminRoute && <Footer/>}
+      {!isAdminRoute && !isTheatreRoute && <Footer/>}
     </>
   )
 }

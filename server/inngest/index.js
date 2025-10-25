@@ -53,22 +53,41 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
   { id: 'release-seats-delete-booking' },
   { event: "app/checkpayment" },
   async ({ event, step }) => {
-    const tenMinutesLater = new Date(Date.now() + 10 * 60 * 1000);
+    const tenMinutesLater = new Date(Date.now() + 10 * 60 * 1000); // Wait for 10 minutes
     await step.sleepUntil('wait-for-10-minutes', tenMinutesLater);
 
     await step.run('check-payment-status', async () => {
       const bookingId = event.data.bookingId;
       const booking = await Booking.findById(bookingId);
 
-      // If payment is not made, release seats and delete booking
+      // Check if booking still exists
+      if (!booking) {
+        console.log(`Booking ${bookingId} not found`);
+        return;
+      }
+
+      // If payment is not made, release seats and remove payment link
       if (!booking.isPaid) {
+        console.log(`Payment not completed for booking ${bookingId}, releasing seats...`);
+        
+        // Release the occupied seats
         const show = await Show.findById(booking.show);
-        booking.bookedSeats.forEach((seat) => {
-          delete show.occupiedSeats[seat];
+        if (show) {
+          booking.bookedSeats.forEach((seat) => {
+            delete show.occupiedSeats[seat];
+          });
+          show.markModified('occupiedSeats');
+          await show.save();
+          console.log(`Released seats: ${booking.bookedSeats.join(', ')}`);
+        }
+
+        // Remove payment link from booking (keep booking record for history)
+        await Booking.findByIdAndUpdate(bookingId, {
+          paymentLink: ""
         });
-        show.markModified('occupiedSeats');
-        await show.save();
-        await Booking.findByIdAndDelete(booking._id);
+        console.log(`Removed payment link for booking ${bookingId}`);
+      } else {
+        console.log(`Booking ${bookingId} already paid, no action needed`);
       }
     });
   }

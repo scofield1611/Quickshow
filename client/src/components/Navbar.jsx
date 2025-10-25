@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { assets } from '../assets/assets'
-import { MenuIcon, SearchIcon, TicketPlus, XIcon } from 'lucide-react'
+import { MenuIcon, SearchIcon, TicketPlus, XIcon, TheaterIcon } from 'lucide-react'
 import { useClerk, UserButton, useUser} from '@clerk/clerk-react'
 import { useAppContext } from '../context/AppContext'
 
@@ -29,7 +29,7 @@ const Navbar = () => {
         onClick={() => setIsOpen(!isOpen)}/>
         <Link onClick={() => {scrollTo(0,0), setIsOpen(false)}} to='/'>Home</Link>
         <Link onClick={() => {scrollTo(0,0), setIsOpen(false)}} to='/movies'>Movies</Link>
-        <Link onClick={() => {scrollTo(0,0), setIsOpen(false)}} to='/'>Theaters</Link>
+        <Link onClick={() => {scrollTo(0,0), setIsOpen(false)}} to='/theatres'>Theatres</Link>
         <Link onClick={() => {scrollTo(0,0), setIsOpen(false)}} to='/'>Release</Link>
         {favoriteMovies.length > 0 && (
           <Link onClick={() => {scrollTo(0,0), setIsOpen(false)}} to='/favorite'>Favorite</Link>
@@ -48,7 +48,10 @@ const Navbar = () => {
             <UserButton.MenuItems>
               <UserButton.Action label='My-Bookings' 
               labelIcon={ <TicketPlus width={15} />}
-              onClick={() => navigate('/My-Bookings')} />  {/* User menu with My-Bookings option */}
+              onClick={() => navigate('/My-Bookings')} />
+              <UserButton.Action label='Manage Theatre' 
+              labelIcon={ <TheaterIcon width={15} />}
+              onClick={() => navigate('/theatre')} />
             </UserButton.MenuItems>
           </UserButton> 
         )

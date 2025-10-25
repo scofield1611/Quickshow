@@ -5,17 +5,66 @@ import Movie from "../models/Movie.js";
 // API Controller Function to Get User Bookings
 export const getUserBookings = async (req, res) => {
   try {
-    // FIX: Changed .userID to .userId
     const user = req.auth().userId;
 
-    const bookings = await Booking.find({ user }).populate({
-      path: "show",
-      populate: { path: "movie" }
-    }).sort({ createdAt: -1 });
-    
-    res.json({ success: true, bookings });
+    const bookings = await Booking.find({ user })
+      .populate('theatre')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    console.log(`📚 Found ${bookings.length} bookings for user ${user}`);
+
+    // Manually populate shows and handle movie field
+    const processedBookings = await Promise.all(
+      bookings.map(async (booking, index) => {
+        const Show = (await import("../models/Show.js")).default;
+        const show = await Show.findById(booking.show).lean();
+
+        if (show) {
+          console.log(`📽️ Booking ${index + 1} - show movie field:`, show.movie, typeof show.movie);
+
+          // Try to populate movie if it's a string
+          if (show.movie && typeof show.movie === 'string') {
+            const movie = await Movie.findById(show.movie).lean();
+
+            if (movie) {
+              // Movie found by ID - use full movie object
+              console.log(`✅ Movie found by ID:`, movie.title);
+              show.movie = movie;
+            } else {
+              // Movie not found - it's a title string, create fallback
+              console.log(`⚠️ Movie ID not found, using as title:`, show.movie);
+              show.movie = {
+                _id: 'unknown',
+                title: show.movie, // Use the string as title
+                poster_path: null,
+                backdrop_path: null,
+                overview: 'Movie information not available',
+                genres: [],
+                vote_average: 0,
+                release_date: new Date().toISOString().split('T')[0],
+                runtime: 0
+              };
+              console.log(`📦 Created fallback movie:`, show.movie.title);
+            }
+          } else {
+            console.log(`❌ Show has no valid movie field`);
+          }
+
+          booking.show = show;
+        } else {
+          console.log(`❌ Show not found for booking ${index + 1}`);
+        }
+
+        return booking;
+      })
+    );
+
+    console.log(`✨ Returning ${processedBookings.length} processed bookings`);
+
+    res.json({ success: true, bookings: processedBookings });
   } catch (error) {
-    console.error(error.message);
+    console.error('❌ getUserBookings error:', error.message);
     res.json({ success: false, message: error.message });
   }
 };
