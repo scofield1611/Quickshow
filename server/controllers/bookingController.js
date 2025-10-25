@@ -1,6 +1,7 @@
 import Show from "../models/Show.js";
 import Booking from '../models/Booking.js';
 import Theatre from '../models/Theatre.js';
+import Movie from '../models/Movie.js';
 import stripe from 'stripe';
 
 // Function to check availability of selected seats for a movie
@@ -26,17 +27,32 @@ export const createBooking = async (req, res) => {
     const { showId, selectedSeats } = req.body;
     const { origin } = req.headers;
 
-    // Get the show details with theatre
+    // Get the show details with theatre (don't populate movie, it won't work)
     const showData = await Show.findById(showId)
-      .populate('movie')
-      .populate('theatre');
+      .populate('theatre')
+      .lean();
 
     if (!showData) {
       return res.json({ success: false, message: "Show not found" });
     }
 
+    // Manually fetch movie data
+    let movieTitle = 'Movie';
+    if (showData.movie && typeof showData.movie === 'string') {
+      const movie = await Movie.findById(showData.movie).lean();
+      if (movie) {
+        movieTitle = movie.title;
+        showData.movie = movie; // Attach full movie object
+      } else {
+        movieTitle = `Movie ${showData.movie}`;
+      }
+    }
+
+    // Convert back to mongoose document for modifications
+    const show = await Show.findById(showId).populate('theatre');
+
     // Verify theatre is approved
-    if (showData.theatre.approvalStatus !== 'APPROVED') {
+    if (show.theatre.approvalStatus !== 'APPROVED') {
       return res.json({
         success: false,
         message: "This theatre is not approved for bookings"
@@ -44,7 +60,7 @@ export const createBooking = async (req, res) => {
     }
 
     // Check if the theatre is active
-    if (!showData.theatre.isActive) {
+    if (!show.theatre.isActive) {
       return res.json({
         success: false,
         message: "This theatre is currently inactive"
@@ -62,24 +78,22 @@ export const createBooking = async (req, res) => {
     const booking = await Booking.create({
       user: userId,
       show: showId,
-      theatre: showData.theatre._id,
-      amount: showData.showPrice * selectedSeats.length,
+      theatre: show.theatre._id,
+      amount: show.showPrice * selectedSeats.length,
       bookedSeats: selectedSeats
     });
 
     selectedSeats.map((seat) => {
-      showData.occupiedSeats[seat] = userId;
+      show.occupiedSeats[seat] = userId;
     });
 
-    showData.markModified('occupiedSeats');
-    await showData.save();
+    show.markModified('occupiedSeats');
+    await show.save();
 
     // Stripe Gateway Initialize
     const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
 
-    // Get movie title (handle null movie)
-    const movieTitle = showData.movie || 'Movie';
-    const theatreName = showData.theatre.name;
+    const theatreName = show.theatre.name;
 
     // Creating line items for Stripe
     const line_items = [{
@@ -154,17 +168,64 @@ export const getUserBookings = async (req, res) => {
     const { userId } = req.auth();
 
     const bookings = await Booking.find({ user: userId })
-      .populate({
-        path: 'show',
-        populate: { path: 'movie' }
-      })
       .populate('theatre', 'name address contact')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean(); // Convert to plain JavaScript objects
 
-    res.json({ success: true, bookings });
+    console.log(`📚 Found ${bookings.length} bookings for user ${userId}`);
+
+    // Manually populate shows and handle movie field
+    const processedBookings = await Promise.all(
+      bookings.map(async (booking, index) => {
+        const show = await Show.findById(booking.show).lean();
+
+        if (show) {
+          console.log(`📽️ Processing booking ${index + 1}, show movie field:`, show.movie, typeof show.movie);
+
+          // Try to populate movie if it's an ID
+          if (show.movie && typeof show.movie === 'string') {
+            const movie = await Movie.findById(show.movie).lean();
+
+            if (movie) {
+              // Movie found - use it
+              console.log(`✅ Movie found by ID:`, movie.title);
+              show.movie = movie;
+            } else {
+              // Movie not found - it's probably a title string, create fallback
+              console.log(`⚠️ Movie not found by ID, using title as fallback:`, show.movie);
+              show.movie = {
+                _id: 'unknown',
+                title: show.movie, // Use the string as title
+                poster_path: null,
+                backdrop_path: null,
+                overview: 'Movie information not available',
+                genres: [],
+                vote_average: 0,
+                release_date: new Date().toISOString().split('T')[0],
+                runtime: 0
+              };
+              console.log(`📦 Created fallback movie object:`, show.movie);
+            }
+          } else {
+            console.log(`❌ Show has no movie field or invalid type`);
+          }
+
+          booking.show = show;
+        } else {
+          console.log(`❌ Show not found for booking ${index + 1}`);
+        }
+
+        return booking;
+      })
+    );
+
+    console.log(`✨ Returning ${processedBookings.length} processed bookings`);
+
+    res.json({ success: true, bookings: processedBookings });
 
   } catch (error) {
-    console.log(error.message);
+    console.log('❌ getUserBookings error:', error.message);
+    console.error('Full error:', error);
     res.json({ success: false, message: error.message });
   }
 };
@@ -205,11 +266,36 @@ export const getShowsByTheatreAndMovie = async (req, res) => {
     }
 
     const shows = await Show.find(filter)
-      .populate('movie')
       .populate('theatre', 'name address')
-      .sort({ showDateTime: 1 });
+      .sort({ showDateTime: 1 })
+      .lean();
 
-    res.json({ success: true, shows });
+    // Manually populate movie data
+    const processedShows = await Promise.all(
+      shows.map(async (show) => {
+        let movieData = null;
+
+        if (show.movie && typeof show.movie === 'string') {
+          movieData = await Movie.findById(show.movie).lean();
+
+          if (!movieData) {
+            // Fallback
+            movieData = {
+              _id: show.movie,
+              title: `Movie ${show.movie}`,
+              poster_path: null
+            };
+          }
+        }
+
+        return {
+          ...show,
+          movie: movieData
+        };
+      })
+    );
+
+    res.json({ success: true, shows: processedShows });
 
   } catch (error) {
     console.log(error.message);

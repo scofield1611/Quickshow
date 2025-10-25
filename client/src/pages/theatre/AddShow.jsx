@@ -212,7 +212,7 @@ const AddShow = () => {
             >
               <option value=''>Choose a movie</option>
               {movies.map((movie) => (
-                <option key={movie._id} value={movie._id}>
+                <option key={movie.id} value={movie.id}>
                   {movie.title} ({movie.release_date?.slice(0, 4)})
                 </option>
               ))}

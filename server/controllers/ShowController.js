@@ -117,9 +117,8 @@ export const addShow = async (req, res) => {
 // API to get all shows from the database
 export const getShows = async (req, res) => {
   try {
-    // Get all shows (including past ones for testing)
+    // Get all shows WITHOUT population first
     const shows = await Show.find({})
-      .populate('movie')
       .sort({ showDateTime: -1 })
       .lean();
 
@@ -128,39 +127,43 @@ export const getShows = async (req, res) => {
     // Build unique movies, handle both valid IDs and string titles
     const uniqueMoviesMap = new Map();
 
-    shows.forEach(show => {
+    for (const show of shows) {
       let movieKey, movieObj;
 
-      if (show.movie && typeof show.movie === 'object' && show.movie._id) {
-        // Valid movie with full data
-        movieKey = show.movie._id;
-        movieObj = show.movie;
-        console.log('Valid movie:', show.movie.title);
-      } else if (show.movie && typeof show.movie === 'string') {
-        // Movie is string title - create fallback
-        movieKey = show.movie;
-        movieObj = {
-          id: show.movie,
-          _id: show.movie,
-          title: show.movie,
-          poster_path: null,
-          backdrop_path: null,
-          vote_average: 7.0,
-          release_date: "2025",
-          overview: 'Available for booking',
-          genres: [],
-          runtime: 120
-        };
-        console.log('Fallback movie:', show.movie);
-      } else {
-        console.log('Skipping show with no movie');
-        return; // Skip if no movie data
-      }
+      if (show.movie && typeof show.movie === 'string') {
+        // Try to find movie by ID first
+        const movie = await Movie.findById(show.movie).lean();
 
-      if (!uniqueMoviesMap.has(movieKey)) {
-        uniqueMoviesMap.set(movieKey, movieObj);
+        if (movie) {
+          // Valid movie found by ID
+          movieKey = movie._id;
+          movieObj = movie;
+          console.log('Valid movie found:', movie.title);
+        } else {
+          // Movie not found - it's a title string, create fallback
+          movieKey = show.movie;
+          movieObj = {
+            id: show.movie,
+            _id: show.movie,
+            title: show.movie,
+            poster_path: null,
+            backdrop_path: null,
+            vote_average: 7.0,
+            release_date: "2025",
+            overview: 'Available for booking',
+            genres: [],
+            runtime: 120
+          };
+          console.log('Fallback movie created:', show.movie);
+        }
+
+        if (!uniqueMoviesMap.has(movieKey)) {
+          uniqueMoviesMap.set(movieKey, movieObj);
+        }
+      } else {
+        console.log('Skipping show with invalid movie field:', show._id);
       }
-    });
+    }
 
     const uniqueMovies = Array.from(uniqueMoviesMap.values());
     console.log('DEBUG: Returning', uniqueMovies.length, 'unique movies');
@@ -213,6 +216,34 @@ export const getShow = async (req, res) => {
 
   } catch (error) {
     console.error(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// Debug endpoint to check show data
+export const debugShow = async (req, res) => {
+  try {
+    const { showId } = req.params;
+
+    // Get show without population
+    const showRaw = await Show.findById(showId).lean();
+    console.log('Raw show data:', showRaw);
+
+    // Get show with population
+    const showPopulated = await Show.findById(showId)
+      .populate('movie')
+      .populate('theatre')
+      .lean();
+    console.log('Populated show data:', showPopulated);
+
+    res.json({
+      success: true,
+      raw: showRaw,
+      populated: showPopulated
+    });
+
+  } catch (error) {
+    console.error('Debug error:', error);
     res.json({ success: false, message: error.message });
   }
 };

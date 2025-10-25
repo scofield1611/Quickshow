@@ -259,7 +259,7 @@ export const createShow = async (req, res) => {
   try {
     const { theatreId } = req.params;
     const { userId } = req.auth;
-    const { movie, hallName, showDateTime, showPrice, seatConfiguration } = req.body;
+    const { movie: movieId, hallName, showDateTime, showPrice, seatConfiguration } = req.body;
 
     // Validate theatre ownership
     const theatre = await Theatre.findById(theatreId);
@@ -285,17 +285,65 @@ export const createShow = async (req, res) => {
     }
 
     // Validation
-    if (!movie || !hallName || !showDateTime || !showPrice || !seatConfiguration) {
+    if (!movieId || !hallName || !showDateTime || !showPrice || !seatConfiguration) {
       return res.status(400).json({
         success: false,
         message: "Please provide all required fields"
       });
     }
 
+    // Check if movie exists in database, if not fetch from TMDB
+    const Movie = (await import("../models/Movie.js")).default;
+    let movie = await Movie.findById(movieId);
+
+    if (!movie) {
+      // Fetch movie from TMDB
+      try {
+        const axios = (await import("axios")).default;
+        const [movieDetailsResponse, movieCreditsResponse] = await Promise.all([
+          axios.get(`https://api.themoviedb.org/3/movie/${movieId}`, {
+            headers: { Authorization: `Bearer ${process.env.TMDB_API_KEY}` }
+          }),
+          axios.get(`https://api.themoviedb.org/3/movie/${movieId}/credits`, {
+            headers: { Authorization: `Bearer ${process.env.TMDB_API_KEY}` }
+          })
+        ]);
+        
+        const movieApiData = movieDetailsResponse.data;
+        const movieCreditsData = movieCreditsResponse.data;
+
+        const movieDetails = {
+          _id: movieId,
+          title: movieApiData.title,
+          overview: movieApiData.overview,
+          poster_path: movieApiData.poster_path,
+          backdrop_path: movieApiData.backdrop_path,
+          genres: movieApiData.genres,
+          casts: movieCreditsData.cast,
+          release_date: movieApiData.release_date,
+          original_language: movieApiData.original_language,
+          tagline: movieApiData.tagline || "",
+          vote_average: movieApiData.vote_average,
+          runtime: movieApiData.runtime,
+        };
+        
+        movie = await Movie.create(movieDetails);
+        console.log(`✅ Movie created in database: ${movie.title}`);
+      } catch (tmdbError) {
+        console.error('Error fetching movie from TMDB:', tmdbError);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid movie ID or TMDB API error"
+        });
+      }
+    } else {
+      console.log(`✅ Movie already exists: ${movie.title}`);
+    }
+
     const totalSeats = seatConfiguration.rows * seatConfiguration.seatsPerRow;
 
     const show = await Show.create({
-      movie,
+      movie: movieId, // Store the movie ID
       theatre: theatreId,
       hallName,
       showDateTime,
@@ -352,11 +400,67 @@ export const getTheatreShows = async (req, res) => {
       .sort({ showDateTime: 1 })
       .lean();
 
-    // Simply return movie field as movieName
-    const processedShows = shows.map(show => ({
-      ...show,
-      movieName: show.movie  // Whatever is in movie field
-    }));
+    console.log(`🎬 Found ${shows.length} shows for theatre ${theatre.name}`);
+
+    const Movie = (await import("../models/Movie.js")).default;
+    const axios = (await import("axios")).default;
+
+    // Process each show to populate movie data
+    const processedShows = await Promise.all(
+      shows.map(async (show) => {
+        let movieData = null;
+
+        if (show.movie && typeof show.movie === 'string') {
+          // Try to find movie in database
+          movieData = await Movie.findById(show.movie).lean();
+
+          if (movieData) {
+            console.log(`✅ Movie found in DB: ${movieData.title}`);
+          } else {
+            // Movie not in database - try to fetch from TMDB
+            console.log(`⚠️ Movie ${show.movie} not in DB, fetching from TMDB...`);
+            try {
+              const response = await axios.get(
+                `https://api.themoviedb.org/3/movie/${show.movie}`,
+                {
+                  headers: { Authorization: `Bearer ${process.env.TMDB_API_KEY}` }
+                }
+              );
+
+              movieData = {
+                _id: show.movie,
+                title: response.data.title,
+                poster_path: response.data.poster_path,
+                backdrop_path: response.data.backdrop_path,
+                overview: response.data.overview,
+                genres: response.data.genres || [],
+                vote_average: response.data.vote_average,
+                release_date: response.data.release_date,
+                runtime: response.data.runtime
+              };
+
+              console.log(`🎥 Fetched from TMDB: ${movieData.title}`);
+            } catch (tmdbError) {
+              console.error(`❌ Failed to fetch movie ${show.movie}:`, tmdbError.message);
+              // Create minimal fallback
+              movieData = {
+                _id: show.movie,
+                title: `Movie ID: ${show.movie}`,
+                poster_path: null
+              };
+            }
+          }
+        }
+
+        return {
+          ...show,
+          movie: movieData, // Full movie object
+          movieName: movieData?.title || 'Unknown Movie'
+        };
+      })
+    );
+
+    console.log(`✨ Returning ${processedShows.length} shows with movie data`);
 
     res.json({
       success: true,
@@ -488,11 +592,59 @@ export const getShowById = async (req, res) => {
       });
     }
 
-    // Add movieName for display
+    console.log(`🎬 Fetching show ${showId}, movie field:`, show.movie);
+
+    // Fetch movie data
+    let movieData = null;
+    if (show.movie && typeof show.movie === 'string') {
+      const Movie = (await import("../models/Movie.js")).default;
+      movieData = await Movie.findById(show.movie).lean();
+
+      if (movieData) {
+        console.log(`✅ Movie found: ${movieData.title}`);
+      } else {
+        // Movie not in database - try TMDB
+        console.log(`⚠️ Movie ${show.movie} not in DB, fetching from TMDB...`);
+        try {
+          const axios = (await import("axios")).default;
+          const response = await axios.get(
+            `https://api.themoviedb.org/3/movie/${show.movie}`,
+            {
+              headers: { Authorization: `Bearer ${process.env.TMDB_API_KEY}` }
+            }
+          );
+
+          movieData = {
+            _id: show.movie,
+            title: response.data.title,
+            poster_path: response.data.poster_path,
+            backdrop_path: response.data.backdrop_path,
+            overview: response.data.overview,
+            genres: response.data.genres || [],
+            vote_average: response.data.vote_average,
+            release_date: response.data.release_date,
+            runtime: response.data.runtime
+          };
+
+          console.log(`🎥 Fetched from TMDB: ${movieData.title}`);
+        } catch (tmdbError) {
+          console.error(`❌ Failed to fetch movie:`, tmdbError.message);
+          movieData = {
+            _id: show.movie,
+            title: `Movie ID: ${show.movie}`,
+            poster_path: null
+          };
+        }
+      }
+    }
+
     const processedShow = {
       ...show,
-      movieName: show.movie || 'Unknown Movie'
+      movie: movieData, // Full movie object
+      movieName: movieData?.title || 'Unknown Movie'
     };
+
+    console.log(`✨ Returning show with movie: ${processedShow.movieName}`);
 
     res.json({
       success: true,
