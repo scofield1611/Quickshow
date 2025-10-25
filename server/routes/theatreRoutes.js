@@ -28,7 +28,7 @@ router.delete("/:id", protectTheatreOwner, deleteTheatre);
 
 // Show management routes
 router.post("/:theatreId/shows", protectTheatreOwner, createShow);
-router.get("/:theatreId/shows", protectUser, getTheatreShows);
+router.get("/:theatreId/shows", getTheatreShows); // Made public - anyone can view shows
 router.put("/:theatreId/shows/:showId", protectTheatreOwner, updateShow);
 router.delete("/:theatreId/shows/:showId", protectTheatreOwner, deleteShow);
 

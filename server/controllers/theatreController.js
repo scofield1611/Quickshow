@@ -378,7 +378,8 @@ export const createShow = async (req, res) => {
 export const getTheatreShows = async (req, res) => {
   try {
     const { theatreId } = req.params;
-    const { userId } = req.auth;
+    // Make auth optional - public can view approved theatres
+    const userId = req.auth?.userId || req.auth?.() || null;
 
     const theatre = await Theatre.findById(theatreId);
     if (!theatre) {
@@ -388,7 +389,17 @@ export const getTheatreShows = async (req, res) => {
       });
     }
 
-    if (theatre.owner !== userId && theatre.approvalStatus !== 'APPROVED') {
+    // Only check ownership if user is authenticated
+    // Public users can only view approved theatres
+    if (!userId && theatre.approvalStatus !== 'APPROVED') {
+      return res.status(403).json({
+        success: false,
+        message: "Theatre not accessible"
+      });
+    }
+
+    // If user is authenticated but not owner, only show approved
+    if (userId && theatre.owner !== userId && theatre.approvalStatus !== 'APPROVED') {
       return res.status(403).json({
         success: false,
         message: "Theatre not accessible"

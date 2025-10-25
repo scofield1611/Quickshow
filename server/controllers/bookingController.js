@@ -95,6 +95,14 @@ export const createBooking = async (req, res) => {
 
     const theatreName = show.theatre.name;
 
+    // Convert Rupees to USD for Stripe (approximate rate: 1 USD = 83 INR)
+    // User sees price in Rupees, but Stripe processes in USD
+    const amountInRupees = booking.amount;
+    const conversionRate = 83; // 1 USD = 83 INR (update as needed)
+    const amountInUSD = amountInRupees / conversionRate;
+
+    console.log(`💰 Booking amount: ₹${amountInRupees} = $${amountInUSD.toFixed(2)} USD`);
+
     // Creating line items for Stripe
     const line_items = [{
       price_data: {
@@ -102,7 +110,7 @@ export const createBooking = async (req, res) => {
         product_data: {
           name: `${movieTitle} - ${theatreName}`
         },
-        unit_amount: Math.floor(booking.amount) * 100
+        unit_amount: Math.floor(amountInUSD * 100) // Convert to cents
       },
       quantity: 1
     }];

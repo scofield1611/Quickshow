@@ -1,22 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import toast from 'react-hot-toast';
 import Loading from '../components/Loading';
-import { 
-  TheaterIcon, 
-  MapPinIcon, 
+import {
+  TheaterIcon,
+  MapPinIcon,
   CalendarIcon,
   ClockIcon,
   DollarSignIcon,
   ArrowLeftIcon,
   FilmIcon,
-  PhoneIcon
+  PhoneIcon,
+  IndianRupee
 } from 'lucide-react';
 import dateFormat from '../lib/dateFormat';
 
 const TheatreShows = () => {
   const { theatreId } = useParams();
+  const navigate = useNavigate();
   const { axios, getToken, image_base_url } = useAppContext();
   const [theatre, setTheatre] = useState(null);
   const [shows, setShows] = useState([]);
@@ -67,10 +69,15 @@ const TheatreShows = () => {
       const { data } = await axios.get(`/api/theatre/${theatreId}/shows`, config);
 
       console.log('Shows API response:', data);
+      console.log('Shows count:', data.shows?.length);
+      console.log('All shows:', data.shows);
 
       if (data.success) {
-        setShows(data.shows);
+        // Don't filter by date - show ALL shows including past ones for now
+        console.log('Setting shows:', data.shows);
+        setShows(data.shows || []);
       } else {
+        console.log('API returned success: false');
         toast.error('No shows available');
       }
     } catch (error) {
@@ -101,14 +108,14 @@ const TheatreShows = () => {
   return (
     <div className='min-h-screen pt-24 px-6 md:px-16 lg:px-36 pb-12'>
       {/* Back Button */}
-      <Link 
-        to='/theatres'
+      <button
+        onClick={() => navigate(-1)}
         className='inline-flex items-center gap-2 text-gray-400 hover:text-white 
           transition-colors mb-6'
       >
         <ArrowLeftIcon className='w-5 h-5' />
-        Back to Theatres
-      </Link>
+        Back to Movie
+      </button>
 
       {/* Theatre Header */}
       {theatre && (
@@ -188,7 +195,7 @@ const TheatreShows = () => {
                           <span>{show.hallName}</span>
                         </div>
                         <div className='flex items-center gap-2 text-sm'>
-                          <DollarSignIcon className='w-4 h-4 text-primary' />
+                          <IndianRupee className='w-4 h-4 text-primary' />
                           <span className='text-primary font-semibold text-lg'>
                             {currency}{show.showPrice}
                           </span>

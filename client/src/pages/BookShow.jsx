@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Loading from '../components/Loading';
-import { ArrowRightIcon, ArrowLeftIcon, FilmIcon, TheaterIcon, CalendarIcon, DollarSignIcon } from 'lucide-react';
+import { ArrowRightIcon, ArrowLeftIcon, FilmIcon, TheaterIcon, CalendarIcon, DollarSignIcon, ClockIcon } from 'lucide-react';
 import { assets } from '../assets/assets';
 import toast from 'react-hot-toast';
 import { useAppContext } from '../context/AppContext';
@@ -11,6 +11,7 @@ const BookShow = () => {
   const { showId } = useParams();
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [show, setShow] = useState(null);
+  const [allShows, setAllShows] = useState([]);
   const [occupiedSeats, setOccupiedSeats] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -23,6 +24,33 @@ const BookShow = () => {
     }
     setSelectedSeats(prev => prev.includes(seatId) ?
       prev.filter(seat => seat !== seatId) : [...prev, seatId]);
+  };
+
+  const handleShowTimeChange = (newShowId) => {
+    if (selectedSeats.length > 0) {
+      if (!confirm('Changing show time will clear your selected seats. Continue?')) {
+        return;
+      }
+    }
+    navigate(`/book-show/${newShowId}`);
+  };
+
+  const formatTime = (dateTime) => {
+    const date = new Date(dateTime);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const formatDate = (dateTime) => {
+    const date = new Date(dateTime);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   const renderSeats = () => {
@@ -41,7 +69,7 @@ const BookShow = () => {
               const seatId = `${rowLabels[rowIndex]}${seatIndex + 1}`;
               const isOccupied = occupiedSeats.includes(seatId);
               const isSelected = selectedSeats.includes(seatId);
-              
+
               return (
                 <button
                   key={seatId}
@@ -69,9 +97,13 @@ const BookShow = () => {
     try {
       const { data } = await axios.get(`/api/theatre/show/${showId}`);
       console.log('Show details:', data);
-      
+
       if (data.success) {
         setShow(data.show);
+        // Fetch other shows for same movie at same theatre
+        if (data.show.movie && data.show.theatre) {
+          getAvailableShows(data.show.theatre._id, data.show.movie._id || data.show.movie);
+        }
       } else {
         toast.error('Show not found');
         navigate(-1);
@@ -82,6 +114,21 @@ const BookShow = () => {
       navigate(-1);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getAvailableShows = async (theatreId, movieId) => {
+    try {
+      const { data } = await axios.get(`/api/booking/shows`, {
+        params: { theatreId, movieId }
+      });
+
+      if (data.success) {
+        setAllShows(data.shows || []);
+        console.log('Available shows:', data.shows);
+      }
+    } catch (error) {
+      console.error('Error loading available shows:', error);
     }
   };
 
@@ -121,6 +168,7 @@ const BookShow = () => {
   };
 
   useEffect(() => {
+    setSelectedSeats([]); // Clear seats when show changes
     getShowDetails();
     getOccupiedSeats();
   }, [showId]);
@@ -163,7 +211,7 @@ const BookShow = () => {
             <div className='space-y-2 text-gray-400'>
               <div className='flex items-center gap-2'>
                 <TheaterIcon className='w-4 h-4' />
-                <span>{show.hallName}</span>
+                <span>{show.theatre?.name || 'Theatre'} - {show.hallName}</span>
               </div>
               <div className='flex items-center gap-2'>
                 <CalendarIcon className='w-4 h-4' />
@@ -179,6 +227,74 @@ const BookShow = () => {
           </div>
         </div>
       </div>
+
+      {/* Available Show Timings */}
+      {allShows.length > 0 && (
+        <div className='mb-8'>
+          <div className='flex items-center gap-2 mb-4'>
+            <ClockIcon className='w-5 h-5 text-primary' />
+            <h2 className='text-xl font-semibold'>Available Show Timings</h2>
+          </div>
+          
+          <div className='bg-zinc-900 border border-gray-800 rounded-lg p-4'>
+            {/* Group shows by date */}
+            {Object.entries(
+              allShows.reduce((acc, s) => {
+                const date = formatDate(s.showDateTime);
+                if (!acc[date]) acc[date] = [];
+                acc[date].push(s);
+                return acc;
+              }, {})
+            ).map(([date, showsOnDate]) => (
+              <div key={date} className='mb-4 last:mb-0'>
+                <p className='text-sm text-gray-400 mb-3 font-medium'>{date}</p>
+                <div className='flex flex-wrap gap-3'>
+                  {showsOnDate
+                    .sort((a, b) => new Date(a.showDateTime) - new Date(b.showDateTime))
+                    .map((s) => {
+                      const isCurrentShow = s._id === showId;
+                      const availableSeats = s.totalSeats - Object.keys(s.occupiedSeats || {}).length;
+                      const isSoldOut = availableSeats === 0;
+                      
+                      return (
+                        <button
+                          key={s._id}
+                          onClick={() => !isCurrentShow && !isSoldOut && handleShowTimeChange(s._id)}
+                          disabled={isSoldOut}
+                          className={`px-4 py-2 rounded-lg border transition-all ${
+                            isCurrentShow
+                              ? 'bg-primary border-primary text-white font-medium'
+                              : isSoldOut
+                              ? 'bg-gray-800 border-gray-700 text-gray-500 cursor-not-allowed'
+                              : 'border-gray-700 hover:border-primary hover:bg-primary/10 cursor-pointer'
+                          }`}
+                        >
+                          <div className='flex flex-col items-center'>
+                            <span className='text-sm font-medium'>
+                              {formatTime(s.showDateTime)}
+                            </span>
+                            <span className='text-xs text-gray-400 mt-1'>
+                              {isSoldOut ? 'Sold Out' : `${availableSeats} seats`}
+                            </span>
+                            {s.hallName !== show.hallName && (
+                              <span className='text-xs text-gray-500 mt-0.5'>
+                                {s.hallName}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <p className='text-xs text-gray-500 mt-2'>
+            * Click on a time slot to switch shows. Selected seats will be cleared.
+          </p>
+        </div>
+      )}
 
       {/* Seat Selection */}
       <div className='flex flex-col items-center'>
